@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi-Shear Commutator & Prime Lattice</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@400;700&display=swap');
+
+  :root {
+    --bg: #05060a;
+    --surface: #0d0f18;
+    --border: #1e2235;
+    --accent1: #c8a97e;   /* gold — phi */
+    --accent2: #7eb8c8;   /* cyan — pi */
+    --accent3: #c87eb8;   /* violet — identity */
+    --accent4: #7ec87e;   /* green — primes */
+    --text: #c8cde0;
+    --dim: #5a607a;
+    --glow1: rgba(200,169,126,0.15);
+    --glow2: rgba(126,184,200,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* background grid */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(126,184,200,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(126,184,200,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  header { text-align: center; margin-bottom: 40px; }
+  header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    color: var(--accent1);
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 30px var(--glow1);
+    margin-bottom: 8px;
+  }
+  header p { color: var(--dim); font-size: 0.78rem; letter-spacing: 0.05em; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+  }
+  .panel h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel.pi h2 { color: var(--accent2); }
+  .panel.phi h2 { color: var(--accent1); }
+  .panel.comm h2 { color: var(--accent3); }
+  .panel.prime h2 { color: var(--accent4); }
+
+  .controls { display: flex; flex-direction: column; gap: 12px; }
+  .ctrl-row { display: flex; align-items: center; gap: 10px; }
+  .ctrl-row label { font-size: 0.72rem; color: var(--dim); width: 120px; flex-shrink: 0; }
+  .ctrl-row input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  .ctrl-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent1);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--glow1);
+  }
+  .ctrl-row .val {
+    font-size: 0.72rem;
+    color: var(--accent1);
+    width: 50px;
+    text-align: right;
+  }
+
+  canvas {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: #080a12;
+    display: block;
+  }
+
+  .eq-box {
+    background: #080a12;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 14px;
+    margin-top: 14px;
+    font-size: 0.72rem;
+    line-height: 1.9;
+    color: var(--dim);
+  }
+  .eq-box .highlight { color: var(--accent3); }
+  .eq-box .phi-c { color: var(--accent1); }
+  .eq-box .pi-c { color: var(--accent2); }
+  .eq-box .prime-c { color: var(--accent4); }
+
+  .output-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .metric {
+    background: #080a12;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px;
+    text-align: center;
+  }
+  .metric .label { font-size: 0.62rem; color: var(--dim); margin-bottom: 4px; }
+  .metric .value { font-size: 1rem; font-weight: 700; }
+  .metric.m1 .value { color: var(--accent2); }
+  .metric.m2 .value { color: var(--accent1); }
+  .metric.m3 .value { color: var(--accent3); }
+
+  .prime-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 12px;
+  }
+  .prime-cell {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.62rem;
+    border-radius: 2px;
+    transition: all 0.3s;
+    border: 1px solid transparent;
+  }
+  .prime-cell.prime {
+    background: rgba(126,200,126,0.12);
+    border-color: rgba(126,200,126,0.3);
+    color: var(--accent4);
+  }
+  .prime-cell.composite {
+    background: rgba(255,255,255,0.02);
+    border-color: var(--border);
+    color: var(--dim);
+  }
+  .prime-cell.resonant {
+    background: rgba(200,169,126,0.2);
+    border-color: var(--accent1);
+    color: var(--accent1);
+    box-shadow: 0 0 8px var(--glow1);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 6px var(--glow1); }
+    50% { box-shadow: 0 0 16px rgba(200,169,126,0.4); }
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  .note {
+    font-size: 0.68rem;
+    color: var(--dim);
+    margin-top: 10px;
+    line-height: 1.7;
+    border-left: 2px solid var(--border);
+    padding-left: 10px;
+  }
+  .note span { color: var(--accent3); }
+
+  button {
+    background: transparent;
+    border: 1px solid var(--accent1);
+    color: var(--accent1);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    padding: 7px 16px;
+    cursor: pointer;
+    border-radius: 2px;
+    letter-spacing: 0.08em;
+    transition: all 0.2s;
+    margin-top: 12px;
+  }
+  button:hover {
+    background: var(--glow1);
+    box-shadow: 0 0 12px var(--glow1);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Pi-Shear Commutator Explorer</h1>
+    <p>[ θ , i ] = θi − iθ &nbsp;·&nbsp; Prime Lattice &nbsp;·&nbsp; Identity Breathing</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT: Controls + Kernel -->
+    <div class="panel phi">
+      <h2>KERNEL PARAMETERS</h2>
+      <div class="controls">
+        <div class="ctrl-row">
+          <label>shear depth n</label>
+          <input type="range" id="nMax" min="4" max="40" value="20" step="1">
+          <span class="val" id="nMaxVal">20</span>
+        </div>
+        <div class="ctrl-row">
+          <label>θ scale</label>
+          <input type="range" id="thetaScale" min="0.1" max="5" value="1" step="0.1">
+          <span class="val" id="thetaVal">1.0</span>
+        </div>
+        <div class="ctrl-row">
+          <label>i₀ (initial)</label>
+          <input type="range" id="iInit" min="0.1" max="2" value="0.515" step="0.005">
+          <span class="val" id="iInitVal">0.515</span>
+        </div>
+        <div class="ctrl-row">
+          <label>prime modulus</label>
+          <input type="range" id="primeMod" min="2" max="23" value="7" step="1">
+          <span class="val" id="primeModVal">7</span>
+        </div>
+      </div>
+
+      <div class="output-row">
+        <div class="metric m1">
+          <div class="label">K(n) peak</div>
+          <div class="value" id="kPeak">—</div>
+        </div>
+        <div class="metric m2">
+          <div class="label">i attractor</div>
+          <div class="value" id="iAttractor">—</div>
+        </div>
+        <div class="metric m3">
+          <div class="label">[θ,i] max</div>
+          <div class="value" id="commMax">—</div>
+        </div>
+      </div>
+
+      <div class="eq-box">
+        <span class="pi-c">K(n)</span> = sin(<span class="pi-c">π</span>·n / <span class="phi-c">φ</span>) / n<br>
+        <span class="phi-c">i(t)</span> = <span class="highlight">θ</span> × i &nbsp;→&nbsp; attractor: <span class="phi-c">φ/π</span> ≈ 0.5150<br>
+        <span class="highlight">[θ,i]</span> = θ·i(n) − i(n)·θ(n) &nbsp;(non-commutative)<br>
+        <span class="prime-c">primes</span> = irreducible kernels, only ÷ by self + ONE
+      </div>
+
+      <button id="animBtn">▶ BREATHE</button>
+    </div>
+
+    <!-- RIGHT: Kernel + Commutator canvas -->
+    <div class="panel pi">
+      <h2>KERNEL · IDENTITY · COMMUTATOR</h2>
+      <canvas id="mainCanvas" height="260"></canvas>
+      <div class="note">
+        <span>Blue</span> = K(n) kernel &nbsp;·&nbsp;
+        <span style="color:var(--accent1)">Gold</span> = i(n) identity flow &nbsp;·&nbsp;
+        <span style="color:var(--accent3)">Violet</span> = [θ,i] commutator
+      </div>
+    </div>
+
+    <!-- BOTTOM LEFT: Prime Lattice -->
+    <div class="panel prime">
+      <h2>PRIME LATTICE — IRREDUCIBLE KERNELS</h2>
+      <div class="prime-grid" id="primeGrid"></div>
+      <div class="note" style="margin-top:12px">
+        <span style="color:var(--accent4)">Green</span> = prime (irreducible, ÷ by self + ONE only) &nbsp;·&nbsp;
+        <span style="color:var(--accent1)">Gold pulse</span> = prime resonant with current shear depth &nbsp;·&nbsp;
+        Grey = composite (reducible)
+      </div>
+    </div>
+
+    <!-- BOTTOM RIGHT: Phase portrait -->
+    <div class="panel comm">
+      <h2>PHASE PORTRAIT — θ vs i</h2>
+      <canvas id="phaseCanvas" height="260"></canvas>
+      <div class="note">
+        Trajectory of identity i under shear θ. Spiral convergence toward
+        <span>φ/π attractor</span>. Non-closure = breathing is alive.
+        Closed loop = frozen identity = death of the kernel.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Commentary -->
+  <div class="panel full-width comm" style="margin-top:0">
+    <h2>COMMUTATOR ANALYSIS — WHY [θ,i] ≠ 0 KEEPS THE KERNEL ALIVE</h2>
+    <div class="eq-box" style="margin-top:0; line-height:2">
+      If <span class="highlight">[θ,i] = 0</span> → θ and i commute → shear and identity evolve independently → system freezes into a static attractor → <em>no breathing, no identity evolution, thermodynamic death.</em><br><br>
+      If <span class="highlight">[θ,i] ≠ 0</span> → each shear event updates identity in a way that depends on the current shear angle → the kernel cannot settle → it <em>breathes</em>. This is structurally identical to why <span class="pi-c">[x̂, p̂] = iℏ</span> in QM prevents electrons from collapsing into the nucleus.<br><br>
+      <span class="prime-c">Primes as irreducible kernels:</span> A prime p has no operator decomposition O₁∘O₂ with non-trivial factors. It is the <em>atom of the lattice</em> — the point where fractionalization stops. Every composite number is a composite operator (reducible). Every prime is an identity kernel (irreducible). The lattice built on primes gives you a <em>clean coordinate system</em> for the full operator algebra — no redundancy, no overcounting, minimal basis.
+    </div>
+  </div>
+</div>
+
+<script>
+const PI = Math.PI;
+const PHI = (1 + Math.sqrt(5)) / 2;
+
+// ── Sliders ──────────────────────────────────────────────
+const sliders = {
+  nMax:       document.getElementById('nMax'),
+  thetaScale: document.getElementById('thetaScale'),
+  iInit:      document.getElementById('iInit'),
+  primeMod:   document.getElementById('primeMod'),
+};
+const vals = {
+  nMax:       document.getElementById('nMaxVal'),
+  thetaScale: document.getElementById('thetaVal'),
+  iInit:      document.getElementById('iInitVal'),
+  primeMod:   document.getElementById('primeModVal'),
+};
+Object.keys(sliders).forEach(k => {
+  sliders[k].addEventListener('input', () => {
+    vals[k].textContent = parseFloat(sliders[k].value).toFixed(k==='nMax'||k==='primeMod'?0:3);
+    update();
+  });
+});
+
+// ── Math ─────────────────────────────────────────────────
+function kernel(n) { return Math.sin(PI * n / PHI) / n; }
+
+function computeIdentityFlow(nMax, thetaScale, i0) {
+  const iFlow = [i0];
+  const thetaFlow = [0];
+  for (let n = 1; n <= nMax; n++) {
+    const theta = thetaScale * n * (PI / PHI);
+    const iPrev = iFlow[iFlow.length - 1];
+    // i(t) = θ × i — implemented as shear-moment update
+    // θ rotates the identity vector, i scales it toward attractor
+    const iNext = iPrev + 0.15 * (Math.sin(theta) * iPrev - (iPrev - PHI/PI));
+    iFlow.push(iNext);
+    thetaFlow.push(theta);
+  }
+  return { iFlow, thetaFlow };
+}
+
+function computeCommutator(nMax, thetaScale, i0) {
+  const { iFlow, thetaFlow } = computeIdentityFlow(nMax, thetaScale, i0);
+  const comm = [];
+  for (let n = 1; n <= nMax; n++) {
+    const theta = thetaFlow[n];
+    const i = iFlow[n];
+    // [θ,i] = θ·i − i·θ using discrete cross-product analog
+    const thetaI = theta * kernel(n);       // θ acting first
+    const iTheta = i * Math.sin(theta / (PHI)); // i acting first
+    comm.push(thetaI - iTheta);
+  }
+  return { iFlow, thetaFlow, comm };
+}
+
+function isPrime(n) {
+  if (n < 2) return false;
+  for (let i = 2; i <= Math.sqrt(n); i++) if (n % i === 0) return false;
+  return true;
+}
+
+// ── Canvas draw ───────────────────────────────────────────
+function drawMain() {
+  const canvas = document.getElementById('mainCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth * devicePixelRatio;
+  const H = 260 * devicePixelRatio;
+  canvas.width = W; canvas.height = H;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const w = canvas.offsetWidth, h = 260;
+
+  const nMax = parseInt(sliders.nMax.value);
+  const tScale = parseFloat(sliders.thetaScale.value);
+  const i0 = parseFloat(sliders.iInit.value);
+
+  ctx.fillStyle = '#080a12';
+  ctx.fillRect(0, 0, w, h);
+
+  // grid lines
+  ctx.strokeStyle = 'rgba(30,34,53,0.8)';
+  ctx.lineWidth = 0.5;
+  for (let y = 0; y <= h; y += h/6) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  }
+  // zero line
+  ctx.strokeStyle = 'rgba(90,96,122,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+
+  const { iFlow, comm } = computeCommutator(nMax, tScale, i0);
+
+  const xs = n => (n / nMax) * (w - 20) + 10;
+  const ys = (v, range) => h/2 - (v / range) * (h/2 - 20);
+
+  // compute ranges
+  const kVals = Array.from({length:nMax}, (_,i)=>kernel(i+1));
+  const kRange = Math.max(...kVals.map(Math.abs)) * 1.2 || 1;
+  const iRange = Math.max(...iFlow.map(v=>Math.abs(v - PHI/PI))) * 3 + 0.3;
+  const cRange = Math.max(...comm.map(Math.abs)) * 1.2 || 1;
+
+  // draw kernel K(n) — cyan
+  ctx.strokeStyle = '#7eb8c8';
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = '#7eb8c8';
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  kVals.forEach((v, i) => {
+    const x = xs(i+1), y = ys(v, kRange);
+    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // draw identity i(n) — gold
+  ctx.strokeStyle = '#c8a97e';
+  ctx.shadowColor = '#c8a97e';
+  ctx.shadowBlur = 8;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  iFlow.forEach((v, i) => {
+    const x = xs(i), y = ys(v - PHI/PI, iRange);
+    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // draw commutator [θ,i] — violet
+  ctx.strokeStyle = '#c87eb8';
+  ctx.shadowColor = '#c87eb8';
+  ctx.shadowBlur = 10;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,3]);
+  ctx.beginPath();
+  comm.forEach((v, i) => {
+    const x = xs(i+1), y = ys(v, cRange);
+    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.shadowBlur = 0;
+
+  // attractor line
+  ctx.strokeStyle = 'rgba(200,169,126,0.2)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2,4]);
+  ctx.beginPath(); ctx.moveTo(10, h/2); ctx.lineTo(w-10, h/2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // labels
+  ctx.font = `${10 * devicePixelRatio / devicePixelRatio}px Space Mono`;
+  ctx.fillStyle = 'rgba(90,96,122,0.8)';
+  ctx.fillText('n →', w - 24, h - 6);
+
+  // metrics
+  document.getElementById('kPeak').textContent = kVals[0].toFixed(3);
+  document.getElementById('iAttractor').textContent = (PHI/PI).toFixed(4);
+  document.getElementById('commMax').textContent = Math.max(...comm.map(Math.abs)).toFixed(3);
+}
+
+function drawPhase() {
+  const canvas = document.getElementById('phaseCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth * devicePixelRatio;
+  const H = 260 * devicePixelRatio;
+  canvas.width = W; canvas.height = H;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const w = canvas.offsetWidth, h = 260;
+
+  const nMax = parseInt(sliders.nMax.value);
+  const tScale = parseFloat(sliders.thetaScale.value);
+  const i0 = parseFloat(sliders.iInit.value);
+
+  ctx.fillStyle = '#080a12';
+  ctx.fillRect(0,0,w,h);
+
+  const { iFlow, thetaFlow } = computeIdentityFlow(nMax, tScale, i0);
+
+  // normalize to canvas
+  const tMin = Math.min(...thetaFlow), tMax = Math.max(...thetaFlow);
+  const iMin = Math.min(...iFlow), iMax = Math.max(...iFlow);
+  const tRange = tMax - tMin || 1;
+  const iRange2 = iMax - iMin || 0.01;
+
+  const tx = t => 20 + ((t - tMin) / tRange) * (w - 40);
+  const ty = i => h - 20 - ((i - iMin) / iRange2) * (h - 40);
+
+  // draw trajectory with color gradient
+  for (let n = 1; n < iFlow.length; n++) {
+    const t = n / iFlow.length;
+    const r = Math.round(126 + (200-126)*t);
+    const g = Math.round(184 - (184-126)*t);
+    const b = Math.round(200 - (200-184)*t + (184-126)*(1-t));
+    ctx.strokeStyle = `rgba(${r},${g},${b},${0.4 + 0.6*t})`;
+    ctx.lineWidth = 1 + t;
+    ctx.shadowColor = `rgba(${r},${g},${b},0.3)`;
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    ctx.moveTo(tx(thetaFlow[n-1]), ty(iFlow[n-1]));
+    ctx.lineTo(tx(thetaFlow[n]), ty(iFlow[n]));
+    ctx.stroke();
+  }
+
+  // attractor point
+  const ax = tx((thetaFlow[thetaFlow.length-1]));
+  const ay = ty(PHI/PI);
+  ctx.shadowColor = '#c8a97e';
+  ctx.shadowBlur = 16;
+  ctx.fillStyle = '#c8a97e';
+  ctx.beginPath();
+  ctx.arc(ax, ay, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.font = '9px Space Mono';
+  ctx.fillStyle = 'rgba(200,169,126,0.6)';
+  ctx.fillText('φ/π', ax + 7, ay + 4);
+
+  // axes labels
+  ctx.fillStyle = 'rgba(90,96,122,0.6)';
+  ctx.fillText('θ →', w - 20, h - 6);
+  ctx.save();
+  ctx.translate(12, h/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('i →', 0, 0);
+  ctx.restore();
+}
+
+function buildPrimeGrid() {
+  const grid = document.getElementById('primeGrid');
+  const nMax = parseInt(sliders.nMax.value);
+  const primeMod = parseInt(sliders.primeMod.value);
+  grid.innerHTML = '';
+
+  for (let n = 2; n <= 80; n++) {
+    const cell = document.createElement('div');
+    cell.className = 'prime-cell';
+    cell.textContent = n;
+
+    if (isPrime(n)) {
+      // check if resonant with current shear depth
+      const kVal = kernel(n);
+      const resonant = Math.abs(kVal) > 0.05 && (n % primeMod === 0 || n === primeMod || nMax % n === 0);
+      cell.classList.add(resonant ? 'resonant' : 'prime');
+    } else {
+      cell.classList.add('composite');
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function update() {
+  drawMain();
+  drawPhase();
+  buildPrimeGrid();
+}
+
+// ── Animation ─────────────────────────────────────────────
+let animating = false;
+let animFrame = null;
+let animN = 4;
+document.getElementById('animBtn').addEventListener('click', () => {
+  animating = !animating;
+  document.getElementById('animBtn').textContent = animating ? '⏸ PAUSE' : '▶ BREATHE';
+  if (animating) animate();
+  else cancelAnimationFrame(animFrame);
+});
+
+function animate() {
+  if (!animating) return;
+  animN += 0.3;
+  if (animN > 40) animN = 4;
+  sliders.nMax.value = Math.round(animN);
+  vals.nMax.textContent = Math.round(animN);
+  update();
+  animFrame = requestAnimationFrame(animate);
+}
+
+// init
+update();
+window.addEventListener('resize', update);
+</script>
+</body>
+</html>
