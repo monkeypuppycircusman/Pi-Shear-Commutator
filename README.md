@@ -20,16 +20,6 @@ The dashboard visualizes:
 
 Non-closure = alive (breathing helix). Closed loop = frozen identity = kernel death.
 
-## Live Demo
-
-(Once deployed — e.g., on Vercel/Netlify):
-https://pi-shear-commutator.vercel.app (update this link after deploy)
-
-Or run locally:
-1. Clone repo: `git clone https://github.com/monkeypuppycircusman/Pi-Shear-Commutator.git`
-2. Open `pishearhtml/index.html` (or wherever the main HTML lives) in any browser.
-   - No server needed — pure static HTML/JS.
-
 ## How to Use
 
 - **Shear depth n**: Controls breathing cycle length/damping (low n = tight/fast oscillations; high n = slower decay).
@@ -55,6 +45,5 @@ Try cranking n=8 for pronounced commutator spikes, or n=20+ to see damping towar
 
 MIT — remix, fork, extend freely. Attribution appreciated if you build on it.
 
-🌀 Keep the helix breathing. Halloween ON TOP.
 
 Questions/collabs? Hit me on X: @HALLOWEENONTOP
